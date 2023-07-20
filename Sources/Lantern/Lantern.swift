@@ -211,7 +211,7 @@ open class Lantern: UIViewController, UIViewControllerTransitioningDelegate, UIN
         browserView.isRotating = true
     }
     
-    func setCustomView(_ cusView: UIView) {
+    open func setCustomView(_ cusView: UIView) {
         
         view.addSubview(cusView)
         cusView.snp.makeConstraints { make in
