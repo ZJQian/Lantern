@@ -10,6 +10,9 @@ import UIKit
 
 open class Lantern: UIViewController, UIViewControllerTransitioningDelegate, UINavigationControllerDelegate {
     
+    open var showNaviagtionItems: Bool = false
+    private var myBaseNavigationBar: BaseNavigationBar?
+    
     /// 通过本回调，把图片浏览器嵌套在导航控制器里
     public typealias PresentEmbedClosure = (Lantern) -> UINavigationController
     
@@ -73,6 +76,8 @@ open class Lantern: UIViewController, UIViewControllerTransitioningDelegate, UIN
         get { browserView.reloadCellAtIndex }
     }
     
+    open var moreItemActionCallback: ((_ currentIndex: Int) -> Void)?
+    
     /// 自然滑动引起的页码改变时回调
     open lazy var didChangedPageIndex: (_ index: Int) -> Void = { _ in }
     
@@ -134,6 +139,11 @@ open class Lantern: UIViewController, UIViewControllerTransitioningDelegate, UIN
     
     /// 刷新
     open func reloadData() {
+        // 图片数量为0时，移除
+        if numberOfItems() == 0 {
+            dismiss()
+            return
+        }
         browserView.reloadData()
         pageIndicator?.reloadData(numberOfItems: numberOfItems(), pageIndex: pageIndex)
     }
@@ -141,7 +151,7 @@ open class Lantern: UIViewController, UIViewControllerTransitioningDelegate, UIN
     open override func viewDidLoad() {
         super.viewDidLoad()
         
-        automaticallyAdjustsScrollViewInsets = false
+//        automaticallyAdjustsScrollViewInsets = false
         hideNavigationBar(true)
         
         browserView.lantern = self
@@ -157,6 +167,8 @@ open class Lantern: UIViewController, UIViewControllerTransitioningDelegate, UIN
             self.didChangedPageIndex(index)
         }
         
+        setNavigationitems()
+        
         view.setNeedsLayout()
         view.layoutIfNeeded()
     }
@@ -164,7 +176,13 @@ open class Lantern: UIViewController, UIViewControllerTransitioningDelegate, UIN
     open override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
         maskView.frame = view.bounds
-        browserView.frame = view.bounds
+        if showNaviagtionItems {
+            myBaseNavigationBar?.isHidden = false
+            browserView.frame = CGRect(x: 0, y: 0, width: UIScreen.width, height: UIScreen.height)
+        } else {
+            myBaseNavigationBar?.isHidden = true
+            browserView.frame = view.bounds
+        }
         pageIndicator?.reloadData(numberOfItems: numberOfItems(), pageIndex: pageIndex)
     }
     
@@ -192,6 +210,17 @@ open class Lantern: UIViewController, UIViewControllerTransitioningDelegate, UIN
         browserView.isRotating = true
     }
     
+    func setCustomView(_ cusView: UIView) {
+        
+        view.addSubview(cusView)
+        cusView.snp.makeConstraints { make in
+            make.centerX.equalToSuperview()
+            make.bottom.equalTo(view.safeAreaLayoutGuide).offset(-16)
+            make.width.equalToSuperview()
+            make.height.equalTo(100)
+        }
+    }
+    
     //
     // MARK: - Navigation Bar
     //
@@ -210,6 +239,29 @@ open class Lantern: UIViewController, UIViewControllerTransitioningDelegate, UIN
                 navigationController?.setNavigationBarHidden(barHidden, animated: false)
             }
         }
+    }
+    
+    private func setNavigationitems() {
+        myBaseNavigationBar = BaseNavigationBar(frame: CGRect(x: 0, y: 0, width: UIScreen.width, height: UIScreen.status_bar_height+UIScreen.navigation_bar_height))
+        myBaseNavigationBar?.backgroundColor = UIColor.clear
+        view.addSubview(myBaseNavigationBar!)
+        myBaseNavigationBar?.x_setLeftBarButtonItem(UIImage(named: "icon_close"))
+        let moreButton = UIButton(type: .custom)
+        moreButton.setImage(UIImage(named: "icon_more_white"), for: .normal)
+        moreButton.contentHorizontalAlignment = .right
+        moreButton.frame = CGRect(x: 0, y: 0, width: 30, height: 30)
+        moreButton.addTarget(self, action: #selector(moreButtonAction), for: .touchUpInside)
+        myBaseNavigationBar?.x_setRightBarButtonItems([moreButton])
+        myBaseNavigationBar?.leftItemButtonAction {
+            self.dismiss()
+        }
+    }
+    
+    @objc func moreButtonAction() {
+        guard let callback = moreItemActionCallback else {
+            return
+        }
+        callback(browserView.pageIndex)
     }
     
     //
@@ -243,6 +295,10 @@ open class Lantern: UIViewController, UIViewControllerTransitioningDelegate, UIN
         setNeedsStatusBarAppearanceUpdate()
     }
     
+    open override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent
+    }
+    
     //
     // MARK: - 转场
     //
@@ -266,12 +322,14 @@ open class Lantern: UIViewController, UIViewControllerTransitioningDelegate, UIN
         return transitionAnimator
     }
     
+    var dismissCompletion: ((Lantern) -> Void)?
     /// 关闭PhotoBrowser
     open func dismiss() {
         setStatusBar(hidden: false)
         pageIndicator?.removeFromSuperview()
         if presentingViewController != nil {
-            dismiss(animated: true, completion: nil)
+            dismissCompletion?(self)
+            self.presentingViewController?.dismiss(animated: true, completion: nil)
         } else {
             navigationController?.delegate = self
             navigationController?.popViewController(animated: true)
