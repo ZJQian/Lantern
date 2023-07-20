@@ -7,11 +7,12 @@
 //
 
 import UIKit
+import SnapKit
 
 open class Lantern: UIViewController, UIViewControllerTransitioningDelegate, UINavigationControllerDelegate {
     
     open var showNaviagtionItems: Bool = false
-    private var myBaseNavigationBar: BaseNavigationBar?
+    private var myBaseNavigationBar: LanternNavigationBar?
     
     /// 通过本回调，把图片浏览器嵌套在导航控制器里
     public typealias PresentEmbedClosure = (Lantern) -> UINavigationController
@@ -242,7 +243,7 @@ open class Lantern: UIViewController, UIViewControllerTransitioningDelegate, UIN
     }
     
     private func setNavigationitems() {
-        myBaseNavigationBar = BaseNavigationBar(frame: CGRect(x: 0, y: 0, width: UIScreen.width, height: UIScreen.status_bar_height+UIScreen.navigation_bar_height))
+        myBaseNavigationBar = LanternNavigationBar(frame: CGRect(x: 0, y: 0, width: UIScreen.width, height: UIScreen.status_bar_height+UIScreen.navigation_bar_height))
         myBaseNavigationBar?.backgroundColor = UIColor.clear
         view.addSubview(myBaseNavigationBar!)
         myBaseNavigationBar?.x_setLeftBarButtonItem(UIImage(named: "icon_close"))
@@ -322,7 +323,7 @@ open class Lantern: UIViewController, UIViewControllerTransitioningDelegate, UIN
         return transitionAnimator
     }
     
-    var dismissCompletion: ((Lantern) -> Void)?
+    open var dismissCompletion: ((Lantern) -> Void)?
     /// 关闭PhotoBrowser
     open func dismiss() {
         setStatusBar(hidden: false)
